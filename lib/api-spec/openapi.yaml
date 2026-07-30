@@ -3,20 +3,34 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Property Management API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: properties
+    description: Property management
+  - name: rooms
+    description: Room management
+  - name: tenants
+    description: Tenant management
+  - name: payments
+    description: Payment management
+  - name: documents
+    description: Document management
+  - name: dashboard
+    description: Dashboard & analytics
+  - name: search
+    description: Global search
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +38,832 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ── Properties ──────────────────────────────────────────────────────────────
+  /properties:
+    get:
+      operationId: listProperties
+      tags: [properties]
+      summary: List all properties
+      responses:
+        "200":
+          description: List of properties
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Property"
+    post:
+      operationId: createProperty
+      tags: [properties]
+      summary: Create a property
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PropertyInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Property"
+
+  /properties/{id}:
+    get:
+      operationId: getProperty
+      tags: [properties]
+      summary: Get a property
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Property
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PropertyDetail"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateProperty
+      tags: [properties]
+      summary: Update a property
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PropertyUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Property"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteProperty
+      tags: [properties]
+      summary: Delete a property
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
+  # ── Rooms ────────────────────────────────────────────────────────────────────
+  /properties/{propertyId}/rooms:
+    get:
+      operationId: listRooms
+      tags: [rooms]
+      summary: List rooms for a property
+      parameters:
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: List of rooms
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Room"
+    post:
+      operationId: createRoom
+      tags: [rooms]
+      summary: Create a room
+      parameters:
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoomInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Room"
+
+  /rooms/{id}:
+    get:
+      operationId: getRoom
+      tags: [rooms]
+      summary: Get a room
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Room
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Room"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateRoom
+      tags: [rooms]
+      summary: Update a room
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoomUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Room"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteRoom
+      tags: [rooms]
+      summary: Delete a room
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
+  # ── Tenants ──────────────────────────────────────────────────────────────────
+  /tenants:
+    get:
+      operationId: listTenants
+      tags: [tenants]
+      summary: List all tenants
+      responses:
+        "200":
+          description: List of tenants
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Tenant"
+    post:
+      operationId: createTenant
+      tags: [tenants]
+      summary: Create a tenant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TenantInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tenant"
+
+  /tenants/{id}:
+    get:
+      operationId: getTenant
+      tags: [tenants]
+      summary: Get a tenant
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Tenant
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TenantDetail"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateTenant
+      tags: [tenants]
+      summary: Update a tenant
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TenantUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tenant"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteTenant
+      tags: [tenants]
+      summary: Delete a tenant
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
+  # ── Payments ─────────────────────────────────────────────────────────────────
+  /payments:
+    get:
+      operationId: listPayments
+      tags: [payments]
+      summary: List all payments
+      parameters:
+        - name: tenantId
+          in: query
+          required: false
+          schema:
+            type: ["number", "null"]
+        - name: roomId
+          in: query
+          required: false
+          schema:
+            type: ["number", "null"]
+      responses:
+        "200":
+          description: List of payments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Payment"
+    post:
+      operationId: createPayment
+      tags: [payments]
+      summary: Log a payment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Payment"
+
+  /payments/{id}:
+    get:
+      operationId: getPayment
+      tags: [payments]
+      summary: Get a payment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Payment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Payment"
+        "404":
+          description: Not found
+    patch:
+      operationId: updatePayment
+      tags: [payments]
+      summary: Update a payment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Payment"
+        "404":
+          description: Not found
+    delete:
+      operationId: deletePayment
+      tags: [payments]
+      summary: Delete a payment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
+  # ── Documents ────────────────────────────────────────────────────────────────
+  /documents:
+    get:
+      operationId: listDocuments
+      tags: [documents]
+      summary: List documents
+      parameters:
+        - name: tenantId
+          in: query
+          required: false
+          schema:
+            type: ["number", "null"]
+      responses:
+        "200":
+          description: List of documents
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Document"
+    post:
+      operationId: createDocument
+      tags: [documents]
+      summary: Create a document record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
+
+  /documents/{id}:
+    delete:
+      operationId: deleteDocument
+      tags: [documents]
+      summary: Delete a document
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
+  # ── Dashboard ────────────────────────────────────────────────────────────────
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get dashboard summary metrics
+      responses:
+        "200":
+          description: Dashboard metrics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /dashboard/occupancy:
+    get:
+      operationId: getOccupancyBreakdown
+      tags: [dashboard]
+      summary: Get occupancy breakdown by property
+      responses:
+        "200":
+          description: Occupancy per property
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OccupancyItem"
+
+  /dashboard/arrears:
+    get:
+      operationId: getArrearsReport
+      tags: [dashboard]
+      summary: Get arrears report per tenant
+      responses:
+        "200":
+          description: Arrears per tenant
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ArrearsItem"
+
+  /dashboard/revenue-trend:
+    get:
+      operationId: getRevenueTrend
+      tags: [dashboard]
+      summary: Monthly revenue vs expected for last 6 months
+      responses:
+        "200":
+          description: Revenue trend
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RevenueTrendItem"
+
+  # ── Search ───────────────────────────────────────────────────────────────────
+  /search:
+    get:
+      operationId: globalSearch
+      tags: [search]
+      summary: Global search across properties, rooms, and tenants
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchResults"
+
 components:
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
         status:
           type: string
-      required:
-        - status
 
+    # ── Property ──────────────────────────────────────────────────────────────
+    Property:
+      type: object
+      required: [id, name, address, totalRooms, occupiedRooms, expectedRent, createdAt]
+      properties:
+        id:            { type: number }
+        name:          { type: string }
+        address:       { type: string }
+        city:          { type: ["string", "null"] }
+        postcode:      { type: ["string", "null"] }
+        notes:         { type: ["string", "null"] }
+        totalRooms:    { type: number }
+        occupiedRooms: { type: number }
+        expectedRent:  { type: number }
+        createdAt:     { type: string }
+
+    PropertyDetail:
+      type: object
+      required: [id, name, address, totalRooms, occupiedRooms, expectedRent, createdAt, rooms]
+      properties:
+        id:            { type: number }
+        name:          { type: string }
+        address:       { type: string }
+        city:          { type: ["string", "null"] }
+        postcode:      { type: ["string", "null"] }
+        notes:         { type: ["string", "null"] }
+        totalRooms:    { type: number }
+        occupiedRooms: { type: number }
+        expectedRent:  { type: number }
+        createdAt:     { type: string }
+        rooms:
+          type: array
+          items:
+            $ref: "#/components/schemas/Room"
+
+    PropertyInput:
+      type: object
+      required: [name, address]
+      properties:
+        name:     { type: string, minLength: 1 }
+        address:  { type: string, minLength: 1 }
+        city:     { type: string }
+        postcode: { type: string }
+        notes:    { type: string }
+
+    PropertyUpdate:
+      type: object
+      properties:
+        name:     { type: string, minLength: 1 }
+        address:  { type: string }
+        city:     { type: string }
+        postcode: { type: string }
+        notes:    { type: string }
+
+    # ── Room ─────────────────────────────────────────────────────────────────
+    Room:
+      type: object
+      required: [id, propertyId, name, keyTag, status, monthlyRent, createdAt]
+      properties:
+        id:          { type: number }
+        propertyId:  { type: number }
+        name:        { type: string }
+        keyTag:      { type: string }
+        status:      { type: string, enum: [vacant, occupied] }
+        monthlyRent: { type: number }
+        notes:       { type: ["string", "null"] }
+        tenantId:    { type: ["number", "null"] }
+        tenantName:  { type: ["string", "null"] }
+        createdAt:   { type: string }
+
+    RoomInput:
+      type: object
+      required: [name, keyTag, monthlyRent]
+      properties:
+        name:        { type: string, minLength: 1 }
+        keyTag:      { type: string, minLength: 1 }
+        monthlyRent: { type: number, minimum: 0 }
+        notes:       { type: string }
+
+    RoomUpdate:
+      type: object
+      properties:
+        name:        { type: string }
+        keyTag:      { type: string }
+        monthlyRent: { type: number, minimum: 0 }
+        status:      { type: string, enum: [vacant, occupied] }
+        notes:       { type: string }
+
+    # ── Tenant ───────────────────────────────────────────────────────────────
+    Tenant:
+      type: object
+      required: [id, fullName, email, phone, roomId, propertyName, roomName, monthlyRent, leaseStart, status, createdAt]
+      properties:
+        id:           { type: number }
+        fullName:     { type: string }
+        email:        { type: string }
+        phone:        { type: ["string", "null"] }
+        roomId:       { type: number }
+        propertyName: { type: string }
+        roomName:     { type: string }
+        monthlyRent:  { type: number }
+        leaseStart:   { type: string }
+        leaseEnd:     { type: ["string", "null"] }
+        status:       { type: string, enum: [active, inactive] }
+        notes:        { type: ["string", "null"] }
+        createdAt:    { type: string }
+
+    TenantDetail:
+      type: object
+      required: [id, fullName, email, phone, roomId, propertyName, roomName, monthlyRent, leaseStart, status, createdAt, payments, documents]
+      properties:
+        id:           { type: number }
+        fullName:     { type: string }
+        email:        { type: string }
+        phone:        { type: ["string", "null"] }
+        roomId:       { type: number }
+        propertyName: { type: string }
+        roomName:     { type: string }
+        monthlyRent:  { type: number }
+        leaseStart:   { type: string }
+        leaseEnd:     { type: ["string", "null"] }
+        status:       { type: string, enum: [active, inactive] }
+        notes:        { type: ["string", "null"] }
+        createdAt:    { type: string }
+        payments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Payment"
+        documents:
+          type: array
+          items:
+            $ref: "#/components/schemas/Document"
+
+    TenantInput:
+      type: object
+      required: [fullName, email, roomId, leaseStart]
+      properties:
+        fullName:   { type: string, minLength: 1 }
+        email:      { type: string }
+        phone:      { type: string }
+        roomId:     { type: number }
+        leaseStart: { type: string }
+        leaseEnd:   { type: string }
+        notes:      { type: string }
+
+    TenantUpdate:
+      type: object
+      properties:
+        fullName:   { type: string }
+        email:      { type: string }
+        phone:      { type: string }
+        roomId:     { type: number }
+        leaseStart: { type: string }
+        leaseEnd:   { type: string }
+        status:     { type: string, enum: [active, inactive] }
+        notes:      { type: string }
+
+    # ── Payment ──────────────────────────────────────────────────────────────
+    Payment:
+      type: object
+      required: [id, tenantId, tenantName, roomId, roomName, amount, expectedAmount, month, status, paidAt, createdAt]
+      properties:
+        id:             { type: number }
+        tenantId:       { type: number }
+        tenantName:     { type: string }
+        roomId:         { type: number }
+        roomName:       { type: string }
+        amount:         { type: number }
+        expectedAmount: { type: number }
+        month:          { type: string }
+        status:         { type: string, enum: [paid, partial, unpaid] }
+        paidAt:         { type: ["string", "null"] }
+        notes:          { type: ["string", "null"] }
+        createdAt:      { type: string }
+
+    PaymentInput:
+      type: object
+      required: [tenantId, amount, expectedAmount, month, status]
+      properties:
+        tenantId:       { type: number }
+        amount:         { type: number, minimum: 0 }
+        expectedAmount: { type: number, minimum: 0 }
+        month:          { type: string }
+        status:         { type: string, enum: [paid, partial, unpaid] }
+        paidAt:         { type: string }
+        notes:          { type: string }
+
+    PaymentUpdate:
+      type: object
+      properties:
+        amount:         { type: number, minimum: 0 }
+        expectedAmount: { type: number, minimum: 0 }
+        month:          { type: string }
+        status:         { type: string, enum: [paid, partial, unpaid] }
+        paidAt:         { type: string }
+        notes:          { type: string }
+
+    # ── Document ─────────────────────────────────────────────────────────────
+    Document:
+      type: object
+      required: [id, tenantId, tenantName, fileName, fileType, createdAt]
+      properties:
+        id:         { type: number }
+        tenantId:   { type: number }
+        tenantName: { type: string }
+        fileName:   { type: string }
+        fileType:   { type: string }
+        filePath:   { type: ["string", "null"] }
+        notes:      { type: ["string", "null"] }
+        createdAt:  { type: string }
+
+    DocumentInput:
+      type: object
+      required: [tenantId, fileName, fileType]
+      properties:
+        tenantId:  { type: number }
+        fileName:  { type: string, minLength: 1 }
+        fileType:  { type: string }
+        filePath:  { type: string }
+        notes:     { type: string }
+
+    # ── Dashboard ─────────────────────────────────────────────────────────────
+    DashboardSummary:
+      type: object
+      required: [totalProperties, totalRooms, occupiedRooms, vacantRooms, occupancyRate, totalTenants, expectedMonthlyRent, collectedThisMonth, arrearsTotal, collectionRate]
+      properties:
+        totalProperties:      { type: number }
+        totalRooms:           { type: number }
+        occupiedRooms:        { type: number }
+        vacantRooms:          { type: number }
+        occupancyRate:        { type: number }
+        totalTenants:         { type: number }
+        expectedMonthlyRent:  { type: number }
+        collectedThisMonth:   { type: number }
+        arrearsTotal:         { type: number }
+        collectionRate:       { type: number }
+
+    OccupancyItem:
+      type: object
+      required: [propertyId, propertyName, totalRooms, occupiedRooms, occupancyRate]
+      properties:
+        propertyId:    { type: number }
+        propertyName:  { type: string }
+        totalRooms:    { type: number }
+        occupiedRooms: { type: number }
+        occupancyRate: { type: number }
+
+    ArrearsItem:
+      type: object
+      required: [tenantId, tenantName, roomName, propertyName, monthlyRent, totalPaid, arrears, monthsUnpaid]
+      properties:
+        tenantId:     { type: number }
+        tenantName:   { type: string }
+        roomName:     { type: string }
+        propertyName: { type: string }
+        monthlyRent:  { type: number }
+        totalPaid:    { type: number }
+        arrears:      { type: number }
+        monthsUnpaid: { type: number }
+
+    RevenueTrendItem:
+      type: object
+      required: [month, collected, expected]
+      properties:
+        month:     { type: string }
+        collected: { type: number }
+        expected:  { type: number }
+
+    # ── Search ────────────────────────────────────────────────────────────────
+    SearchResults:
+      type: object
+      required: [properties, rooms, tenants]
+      properties:
+        properties:
+          type: array
+          items:
+            $ref: "#/components/schemas/Property"
+        rooms:
+          type: array
+          items:
+            $ref: "#/components/schemas/Room"
+        tenants:
+          type: array
+          items:
+            $ref: "#/components/schemas/Tenant"

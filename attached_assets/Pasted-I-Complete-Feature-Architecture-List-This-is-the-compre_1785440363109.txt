@@ -1,0 +1,79 @@
+I. Complete Feature & Architecture List
+This is the comprehensive list of every module and capability required for the complete application, structured for an MVC (Model-View-Controller) architecture.
+
+1. Core Architecture & Security
+
+Relational Database Engine: Prisma ORM connected to a local SQLite database for fast, lightweight data modeling.
+
+MVC Codebase Structure: Strict separation of database queries (Models/Controllers) from the frontend React components (Views).
+
+Secure Authentication: Protected login/logout routing to ensure data privacy.
+
+Remote Accessibility: Port-forwarded deployment readiness (via Cloudflare Tunnels) for full mobile access on the go.
+
+2. Property & Room Management
+
+House Portfolio: Create, read, update, and delete (CRUD) physical property locations and addresses.
+
+Granular Room Tracking: Track individual rooms within properties, including custom room names and specific Key Tags.
+
+Occupancy Status: Live monitoring of room statuses (Vacant vs. Occupied) to calculate overall portfolio occupancy rates.
+
+3. Tenant & Document Management
+
+Tenant Profiles: Complete onboarding for new tenants, capturing full names, contact details, and assigning them to specific rooms.
+
+Local Document Storage: A file system integration to securely upload, store, and retrieve physical tenancy agreements and digital documents for each user.
+
+Global Dynamic Search: A unified search engine to instantly find properties by address, rooms by key tags, or tenants by name from anywhere in the application.
+
+4. Financials & Analytics
+
+Payment Logging: Input and track monthly rent payments against expected rent amounts.
+
+Arrears Engine: Automatic calculation of missing rent, generating live "Total Arrears" metrics.
+
+Performance Dashboard: Live data widgets for Collection Rates, Recorded Revenue vs. Expected Revenue, and Unpaid Rent.
+
+Automated Exports: One-click functionality to generate and download formatted spreadsheet ledgers (CSV/Excel) for external accounting.
+
+II. V2 UI/UX Design System (The "View")
+To ensure the entire application feels like a premium, cohesive SaaS product with smooth interactions, every new page must adhere to these strict design rules.
+
+1. The Color Palette
+
+Base/Background: #f4f4f5 (A very soft, light gray canvas to make the dark elements pop).
+
+Primary Dark (Sidebar & Text): #1c1c1e (A rich, deep charcoal/black).
+
+Secondary Dark (Cards & Charts): #2c2c2e (A slightly lighter charcoal for depth).
+
+Action Accent: #d8ff00 (Vibrant lime-green for primary metrics, active states, and focus rings).
+
+Data Accent: #b4a0ff (Soft lavender for secondary data, hover states, and overlapping elements).
+
+2. Shapes & Layout
+
+Extreme Border Radius: Use rounded-[2rem] (32px) for all main data cards and widgets to create a soft, modern feel.
+
+Buttons & Inputs: Use fully rounded pill shapes (rounded-full) for search bars and secondary buttons.
+
+Icons: Use the lucide-react library consistently across all pages, keeping stroke widths uniform (usually size={18} or size={20}).
+
+3. Interactions & Transitions
+
+Universal Smoothness: Add transition-all duration-300 ease-in-out to all interactive elements.
+
+Hover States:
+
+List items and property cards should trigger a subtle background shift on hover (e.g., hover:bg-[#b4a0ff]/5).
+
+Borders should illuminate slightly on hover (hover:border-[#b4a0ff]).
+
+Focus States: Input fields and forms must glow with the primary accent color when clicked (focus:ring-2 focus:ring-[#d8ff00]).
+
+4. Data Visualization (Pure CSS)
+
+Avoid heavy, slow JavaScript charting libraries where possible.
+
+Use standard <div> elements styled with Tailwind to create dynamic progress bars, overlapping metric circles, and dotted matrix grids to represent percentages and collection rates.

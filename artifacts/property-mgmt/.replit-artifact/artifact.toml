@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/"
+title = "Property Manager"
+version = "1.0.0"
+id = "artifacts/property-mgmt"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18558
+
+[services.development]
+run = "pnpm --filter @workspace/property-mgmt run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/property-mgmt", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/property-mgmt/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18558"
+BASE_PATH = "/"
