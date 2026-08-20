@@ -1,0 +1,85 @@
+PropManager architecture and file structure
+===========================================
+
+This repository is a pnpm workspace monorepo. The product is split into a
+React frontend, an Express API, shared generated API code, and a shared
+Drizzle database package.
+
+.
+├── artifacts/
+│   ├── property-mgmt/                 React + Vite web application
+│   │   ├── src/
+│   │   │   ├── components/
+│   │   │   │   ├── layout/             AppShell and sidebar navigation
+│   │   │   │   └── ui/                 Reusable Radix/Tailwind UI primitives
+│   │   │   ├── hooks/                  React hooks, including file uploads
+│   │   │   ├── lib/                    Frontend helpers and payment defaults
+│   │   │   ├── pages/                  Dashboard, properties, tenants, payments,
+│   │   │   │                            documents, tasks, calendar, and search
+│   │   │   ├── App.tsx                 Wouter route table and providers
+│   │   │   └── index.css               Design tokens and global styles
+│   │   ├── vite.config.ts              Frontend dev/build configuration
+│   │   └── package.json
+│   │
+│   ├── api-server/                    Express backend
+│   │   └── src/
+│   │       ├── app.ts                  Express app, middleware, and /api mounting
+│   │       ├── index.ts                PORT-based server entrypoint
+│   │       ├── routes/
+│   │       │   ├── properties.ts       Property CRUD and room summaries
+│   │       │   ├── rooms.ts             Room CRUD
+│   │       │   ├── tenants.ts           Tenant CRUD and tenant enrichment
+│   │       │   ├── payments.ts          Payment CRUD and payment enrichment
+│   │       │   ├── documents.ts         Document metadata CRUD
+│   │       │   ├── tasks.ts              Calendar/task CRUD and linked details
+│   │       │   ├── uploads.ts            Binary device upload handling
+│   │       │   ├── dashboard.ts          Summary and reporting endpoints
+│   │       │   ├── search.ts             Global search
+│   │       │   └── index.ts              Route composition
+│   │       └── lib/                     Logger and server helpers
+│   │
+│   └── mockup-sandbox/                 Component preview workspace
+│
+├── lib/
+│   ├── api-spec/
+│   │   ├── openapi.yaml                 Source of truth for API contracts
+│   │   └── orval.config.ts              Code generation configuration
+│   ├── api-client-react/                Generated React Query hooks/client
+│   ├── api-zod/                         Generated request/response validation
+│   └── db/
+│       ├── src/schema/                   Drizzle tables and insert schemas
+│       │   ├── properties.ts
+│       │   ├── rooms.ts
+│       │   ├── tenants.ts
+│       │   ├── payments.ts
+│       │   ├── documents.ts
+│       │   ├── tasks.ts
+│       │   └── index.ts
+│       └── drizzle.config.ts
+│
+├── attached_assets/                    User-provided assets
+├── scripts/                            Workspace and post-merge scripts
+├── package.json                        Root scripts and workspace metadata
+├── pnpm-workspace.yaml                 Workspace packages and dependency catalog
+├── pnpm-lock.yaml                      Locked dependency versions
+├── .replit                             Replit workflows/deployment configuration
+├── README.md                            Local installation and run guide
+└── structure.txt                        This architecture map
+
+Request flow
+------------
+
+Browser -> React page -> generated React Query hook (or task/upload fetch)
+        -> /api Express route -> Drizzle ORM -> PostgreSQL
+
+The OpenAPI file should be edited before changing generated API request or
+response shapes. Run api-spec codegen after editing it. Database changes are
+made in lib/db/src/schema and applied with the db push command.
+
+Payment month defaults
+----------------------
+
+The frontend uses the tenant lease start day and existing payment months to
+suggest the next rent month and due date. The suggestion is editable before
+the payment is saved; it is a convenience, not a replacement for accounting
+review.

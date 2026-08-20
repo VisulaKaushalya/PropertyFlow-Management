@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { nextRentMonth, suggestedRentDate, currentMonth, todayDate } from '@/lib/payment-defaults';
 
 export default function Payments() {
   const { data: payments, isLoading } = useListPayments();
@@ -24,9 +25,19 @@ export default function Payments() {
     tenantId: '',
     amount: '',
     expectedAmount: '',
-    month: '',
+    month: currentMonth(),
     status: 'paid' as 'paid' | 'partial' | 'unpaid',
-    paidAt: '',
+    paidAt: todayDate(),
+    notes: ''
+  });
+
+  const resetPaymentForm = () => setFormData({
+    tenantId: '',
+    amount: '',
+    expectedAmount: '',
+    month: currentMonth(),
+    status: 'paid',
+    paidAt: todayDate(),
     notes: ''
   });
 
@@ -49,7 +60,7 @@ export default function Payments() {
           queryClient.invalidateQueries({ queryKey: getListPaymentsQueryKey() });
           toast({ title: 'Payment recorded successfully' });
           setDialogOpen(false);
-          setFormData({ tenantId: '', amount: '', expectedAmount: '', month: '', status: 'paid', paidAt: '', notes: '' });
+           resetPaymentForm();
         },
         onError: () => {
           toast({ title: 'Failed to record payment', variant: 'destructive' });
@@ -123,7 +134,19 @@ export default function Payments() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <Label htmlFor="tenantId" className="text-card-foreground">Tenant</Label>
-                <Select value={formData.tenantId} onValueChange={(val) => setFormData({ ...formData, tenantId: val })}>
+                 <Select value={formData.tenantId} onValueChange={(val) => {
+                   const tenant = tenants?.find((item) => item.id.toString() === val);
+                   const tenantPayments = payments?.filter((payment) => payment.tenantId === Number(val)) ?? [];
+                   const month = tenant ? nextRentMonth(tenant.leaseStart, tenantPayments) : currentMonth();
+                   setFormData({
+                     ...formData,
+                     tenantId: val,
+                     amount: tenant ? tenant.monthlyRent.toString() : '',
+                     expectedAmount: tenant ? tenant.monthlyRent.toString() : '',
+                     month,
+                     paidAt: tenant ? suggestedRentDate(month, tenant.leaseStart) : todayDate(),
+                   });
+                 }}>
                   <SelectTrigger className="rounded-2xl bg-muted/20 border-card-border text-card-foreground" data-testid="select-tenant">
                     <SelectValue placeholder="Select tenant" />
                   </SelectTrigger>
@@ -170,7 +193,13 @@ export default function Payments() {
                   id="month"
                   type="month"
                   value={formData.month}
-                  onChange={(e) => setFormData({ ...formData, month: e.target.value })}
+                   onChange={(e) => setFormData({
+                     ...formData,
+                     month: e.target.value,
+                     paidAt: formData.tenantId
+                       ? suggestedRentDate(e.target.value, tenants?.find((tenant) => tenant.id.toString() === formData.tenantId)?.leaseStart)
+                       : formData.paidAt,
+                   })}
                   required
                   className="rounded-2xl bg-muted/20 border-card-border text-card-foreground"
                   data-testid="input-payment-month"

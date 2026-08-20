@@ -9,7 +9,7 @@ export default function Search() {
   const query = params.get('q') || '';
   
   const { data: results, isLoading } = useGlobalSearch({ q: query }, {
-    query: { enabled: !!query }
+    query: { queryKey: ['search', query], enabled: !!query }
   });
 
   if (!query) {

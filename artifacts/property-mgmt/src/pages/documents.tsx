@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useListDocuments, useCreateDocument, useDeleteDocument, useListTenants, getListDocumentsQueryKey } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
-import { FileText, Plus, Trash2, Search } from 'lucide-react';
+import { FileText, Plus, Trash2, Search, Upload } from 'lucide-react';
 import { Link } from 'wouter';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { useFileUpload } from '@/hooks/use-file-upload';
 
 export default function Documents() {
   const { data: documents, isLoading } = useListDocuments();
@@ -18,25 +19,46 @@ export default function Documents() {
   const deleteDocument = useDeleteDocument();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { uploadFile, uploading } = useFileUpload();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [formData, setFormData] = useState({
     tenantId: '',
     fileName: '',
     fileType: '',
-    filePath: '',
     notes: ''
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      const ext = file.name.split('.').pop()?.toUpperCase() || file.type.split('/')[1]?.toUpperCase() || 'FILE';
+      setFormData({ ...formData, fileName: file.name, fileType: ext });
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    let filePath: string | undefined;
+    if (selectedFile) {
+      const url = await uploadFile(selectedFile);
+      if (!url) {
+        toast({ title: 'Failed to upload file', variant: 'destructive' });
+        return;
+      }
+      filePath = url;
+    }
+
     createDocument.mutate(
       {
         data: {
           tenantId: Number(formData.tenantId),
           fileName: formData.fileName,
           fileType: formData.fileType,
-          filePath: formData.filePath || undefined,
+          filePath: filePath || undefined,
           notes: formData.notes || undefined
         }
       },
@@ -45,7 +67,8 @@ export default function Documents() {
           queryClient.invalidateQueries({ queryKey: getListDocumentsQueryKey() });
           toast({ title: 'Document added successfully' });
           setDialogOpen(false);
-          setFormData({ tenantId: '', fileName: '', fileType: '', filePath: '', notes: '' });
+          setFormData({ tenantId: '', fileName: '', fileType: '', notes: '' });
+          setSelectedFile(null);
         },
         onError: () => {
           toast({ title: 'Failed to add document', variant: 'destructive' });
@@ -84,7 +107,7 @@ export default function Documents() {
     }
     acc[doc.tenantId].documents.push(doc);
     return acc;
-  }, {} as Record<number, { tenantName: string; documents: typeof documents }>);
+  }, {} as Record<number, { tenantName: string; documents: NonNullable<typeof documents> }>);
 
   if (isLoading) {
     return (
@@ -134,6 +157,20 @@ export default function Documents() {
                 </Select>
               </div>
               <div>
+                <Label className="text-card-foreground">Upload File</Label>
+                <label className="flex items-center gap-3 p-4 rounded-2xl border-2 border-dashed border-card-border bg-muted/10 hover:bg-muted/20 cursor-pointer transition-all duration-300">
+                  <Upload size={20} className="text-muted-foreground flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    {selectedFile ? (
+                      <p className="text-sm text-card-foreground font-medium truncate">{selectedFile.name}</p>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Click to choose a file</p>
+                    )}
+                  </div>
+                  <input type="file" className="hidden" onChange={handleFileChange} />
+                </label>
+              </div>
+              <div>
                 <Label htmlFor="fileName" className="text-card-foreground">File Name</Label>
                 <Input
                   id="fileName"
@@ -158,17 +195,6 @@ export default function Documents() {
                 />
               </div>
               <div>
-                <Label htmlFor="filePath" className="text-card-foreground">File Path (Optional)</Label>
-                <Input
-                  id="filePath"
-                  value={formData.filePath}
-                  onChange={(e) => setFormData({ ...formData, filePath: e.target.value })}
-                  placeholder="e.g. /uploads/lease.pdf"
-                  className="rounded-2xl bg-muted/20 border-card-border text-card-foreground"
-                  data-testid="input-document-path"
-                />
-              </div>
-              <div>
                 <Label htmlFor="notes" className="text-card-foreground">Notes</Label>
                 <Textarea
                   id="notes"
@@ -178,8 +204,8 @@ export default function Documents() {
                   data-testid="input-document-notes"
                 />
               </div>
-              <Button type="submit" disabled={createDocument.isPending} className="w-full rounded-full bg-primary text-primary-foreground" data-testid="button-submit-document">
-                {createDocument.isPending ? 'Adding...' : 'Add Document'}
+              <Button type="submit" disabled={createDocument.isPending || uploading} className="w-full rounded-full bg-primary text-primary-foreground" data-testid="button-submit-document">
+                {uploading ? 'Uploading...' : createDocument.isPending ? 'Adding...' : 'Add Document'}
               </Button>
             </form>
           </DialogContent>
@@ -247,7 +273,7 @@ export default function Documents() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => handleDeleteDocument(document.id, document.fileName)}
+                      onClick={() => handleDelete(document.id, document.fileName)}
                       className="rounded-full hover:bg-destructive/20 hover:text-destructive opacity-0 group-hover:opacity-100 transition-all duration-300"
                       data-testid={`button-delete-document-${document.id}`}
                     >

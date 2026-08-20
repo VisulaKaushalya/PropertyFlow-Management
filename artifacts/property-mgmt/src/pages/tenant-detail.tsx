@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { nextRentMonth, suggestedRentDate } from '@/lib/payment-defaults';
 
 export default function TenantDetail() {
   const params = useParams();
@@ -32,6 +33,18 @@ export default function TenantDetail() {
     paidAt: '',
     notes: ''
   });
+
+  const getPaymentDefaults = () => {
+    const month = nextRentMonth(tenant?.leaseStart, tenant?.payments ?? []);
+    return {
+      amount: tenant?.monthlyRent?.toString() ?? '',
+      expectedAmount: tenant?.monthlyRent?.toString() ?? '',
+      month,
+      status: 'paid' as 'paid' | 'partial' | 'unpaid',
+      paidAt: suggestedRentDate(month, tenant?.leaseStart),
+      notes: '',
+    };
+  };
   const [documentFormData, setDocumentFormData] = useState({
     fileName: '',
     fileType: '',
@@ -58,7 +71,7 @@ export default function TenantDetail() {
           queryClient.invalidateQueries({ queryKey: getGetTenantQueryKey(tenantId) });
           toast({ title: 'Payment recorded successfully' });
           setPaymentDialogOpen(false);
-          setPaymentFormData({ amount: '', expectedAmount: '', month: '', status: 'paid', paidAt: '', notes: '' });
+           setPaymentFormData(getPaymentDefaults());
         },
         onError: () => {
           toast({ title: 'Failed to record payment', variant: 'destructive' });
@@ -212,8 +225,13 @@ export default function TenantDetail() {
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold text-card-foreground font-serif">Payment History</h2>
           <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="rounded-full bg-primary text-primary-foreground" size="sm" data-testid="button-add-payment">
+             <DialogTrigger asChild>
+               <Button
+                 onClick={() => setPaymentFormData(getPaymentDefaults())}
+                 className="rounded-full bg-primary text-primary-foreground"
+                 size="sm"
+                 data-testid="button-add-payment"
+               >
                 <Plus size={18} className="mr-2" />
                 Add Payment
               </Button>

@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { useListTenants, useListRooms, useCreateTenant, useDeleteTenant, getListTenantsQueryKey } from '@workspace/api-client-react';
+import { useListTenants, useListRooms, useCreateTenant, useDeleteTenant, getListTenantsQueryKey, useCreatePayment, useListPayments } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Users, Plus, Trash2, Mail, Phone, Calendar, Home, Search } from 'lucide-react';
+import { Users, Plus, Trash2, CreditCard, Search } from 'lucide-react';
 import { Link } from 'wouter';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -11,19 +11,36 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useListProperties } from '@workspace/api-client-react';
+import { useFileUpload } from '@/hooks/use-file-upload';
+import { nextRentMonth, suggestedRentDate, currentMonth, todayDate } from '@/lib/payment-defaults';
+
+interface QuickPayFormData {
+  tenantId: number;
+  tenantName: string;
+  monthlyRent: number;
+  amountPaid: string;
+  month: string;
+  status: string;
+  datePaid: string;
+  evidenceFile: File | null;
+  notes: string;
+}
 
 export default function Tenants() {
   const { data: tenants, isLoading } = useListTenants();
   const { data: properties } = useListProperties();
   const createTenant = useCreateTenant();
   const deleteTenant = useDeleteTenant();
+  const createPayment = useCreatePayment();
+  const { uploadFile, uploading } = useFileUpload();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [quickPayOpen, setQuickPayOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProperty, setSelectedProperty] = useState<string>('');
   const { data: rooms } = useListRooms(selectedProperty ? Number(selectedProperty) : 0, {
-    query: { enabled: !!selectedProperty }
+    query: { queryKey: ['properties', selectedProperty, 'rooms'], enabled: !!selectedProperty }
   });
   const [formData, setFormData] = useState({
     fullName: '',
@@ -32,6 +49,21 @@ export default function Tenants() {
     roomId: '',
     leaseStart: '',
     leaseEnd: '',
+    notes: ''
+  });
+
+  const { data: payments } = useListPayments();
+  const todayStr = todayDate();
+
+  const [quickPayData, setQuickPayData] = useState<QuickPayFormData>({
+    tenantId: 0,
+    tenantName: '',
+    monthlyRent: 0,
+    amountPaid: '',
+    month: currentMonth(),
+    status: 'paid',
+    datePaid: todayStr,
+    evidenceFile: null,
     notes: ''
   });
 
@@ -76,6 +108,62 @@ export default function Tenants() {
         }
       );
     }
+  };
+
+  const openQuickPay = (tenant: any) => {
+    const tenantPayments = payments?.filter((payment) => payment.tenantId === tenant.id) ?? [];
+    const month = nextRentMonth(tenant.leaseStart, tenantPayments);
+    setQuickPayData({
+      tenantId: tenant.id,
+      tenantName: tenant.fullName,
+      monthlyRent: tenant.monthlyRent,
+      amountPaid: tenant.monthlyRent.toString(),
+      month,
+      status: 'paid',
+      datePaid: suggestedRentDate(month, tenant.leaseStart),
+      evidenceFile: null,
+      notes: ''
+    });
+    setQuickPayOpen(true);
+  };
+
+  const handleQuickPaySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    let evidenceUrl: string | undefined;
+    if (quickPayData.evidenceFile) {
+      const url = await uploadFile(quickPayData.evidenceFile);
+      if (!url) {
+        toast({ title: 'Failed to upload evidence', variant: 'destructive' });
+        return;
+      }
+      evidenceUrl = url;
+    }
+
+    createPayment.mutate(
+      {
+        data: {
+          tenantId: quickPayData.tenantId,
+          month: quickPayData.month,
+          amount: Number(quickPayData.amountPaid),
+          expectedAmount: quickPayData.monthlyRent,
+          status: quickPayData.status as 'paid' | 'partial' | 'unpaid',
+          paidAt: quickPayData.datePaid,
+          evidenceUrl: evidenceUrl || undefined,
+          notes: quickPayData.notes || undefined
+        }
+      },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getListTenantsQueryKey() });
+          toast({ title: 'Payment recorded successfully' });
+          setQuickPayOpen(false);
+        },
+        onError: () => {
+          toast({ title: 'Failed to record payment', variant: 'destructive' });
+        }
+      }
+    );
   };
 
   const filteredTenants = tenants?.filter(tenant =>
@@ -293,6 +381,19 @@ export default function Tenants() {
                     size="icon"
                     onClick={(e) => {
                       e.preventDefault();
+                      openQuickPay(tenant);
+                    }}
+                    className="rounded-full bg-primary/10 hover:bg-primary/30 text-primary"
+                    title="Quick Pay"
+                    data-testid={`button-quick-pay-${tenant.id}`}
+                  >
+                    <CreditCard size={18} />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={(e) => {
+                      e.preventDefault();
                       handleDelete(tenant.id, tenant.fullName);
                     }}
                     className="rounded-full hover:bg-destructive/20 hover:text-destructive"
@@ -306,6 +407,110 @@ export default function Tenants() {
           ))}
         </div>
       )}
+
+      {/* Quick Pay Dialog */}
+      <Dialog open={quickPayOpen} onOpenChange={setQuickPayOpen}>
+        <DialogContent className="rounded-[2rem] bg-card border-card-border max-w-xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-serif text-card-foreground">Quick Payment</DialogTitle>
+            <p className="text-muted-foreground">{quickPayData.tenantName}</p>
+          </DialogHeader>
+          <form onSubmit={handleQuickPaySubmit} className="space-y-4">
+            <div>
+              <Label htmlFor="amountPaid" className="text-card-foreground">Amount Paid (£)</Label>
+              <Input
+                id="amountPaid"
+                type="number"
+                step="0.01"
+                value={quickPayData.amountPaid}
+                onChange={(e) => setQuickPayData({ ...quickPayData, amountPaid: e.target.value })}
+                required
+                className="rounded-2xl bg-muted/20 border-card-border text-card-foreground font-mono"
+                data-testid="input-quick-pay-amount"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="month" className="text-card-foreground">Month</Label>
+                <Input
+                  id="month"
+                  type="month"
+                  value={quickPayData.month}
+                  onChange={(e) => setQuickPayData({ ...quickPayData, month: e.target.value })}
+                  required
+                  className="rounded-2xl bg-muted/20 border-card-border text-card-foreground"
+                  data-testid="input-quick-pay-month"
+                />
+              </div>
+              <div>
+                <Label htmlFor="datePaid" className="text-card-foreground">Date Paid</Label>
+                <Input
+                  id="datePaid"
+                  type="date"
+                  value={quickPayData.datePaid}
+                  onChange={(e) => setQuickPayData({ ...quickPayData, datePaid: e.target.value })}
+                  required
+                  className="rounded-2xl bg-muted/20 border-card-border text-card-foreground"
+                  data-testid="input-quick-pay-date"
+                />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="status" className="text-card-foreground">Status</Label>
+              <Select value={quickPayData.status} onValueChange={(val) => setQuickPayData({ ...quickPayData, status: val })}>
+                <SelectTrigger className="rounded-2xl bg-muted/20 border-card-border text-card-foreground" data-testid="select-quick-pay-status">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="rounded-2xl bg-card border-card-border">
+                  <SelectItem value="paid">Paid</SelectItem>
+                  <SelectItem value="partial">Partial</SelectItem>
+                  <SelectItem value="unpaid">Unpaid</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-card-foreground">Photo Evidence (Optional)</Label>
+              <label className="flex items-center gap-3 p-4 rounded-2xl border-2 border-dashed border-card-border bg-muted/10 hover:bg-muted/20 cursor-pointer transition-all duration-300">
+                <CreditCard size={20} className="text-muted-foreground flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  {quickPayData.evidenceFile ? (
+                    <p className="text-sm text-card-foreground font-medium truncate">{quickPayData.evidenceFile.name}</p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Click to upload image evidence</p>
+                  )}
+                </div>
+                <input 
+                  type="file" 
+                  className="hidden" 
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) setQuickPayData({ ...quickPayData, evidenceFile: file });
+                  }}
+                />
+              </label>
+            </div>
+            <div>
+              <Label htmlFor="notes" className="text-card-foreground">Notes</Label>
+              <Textarea
+                id="notes"
+                value={quickPayData.notes}
+                onChange={(e) => setQuickPayData({ ...quickPayData, notes: e.target.value })}
+                className="rounded-2xl bg-muted/20 border-card-border text-card-foreground min-h-[60px]"
+                data-testid="input-quick-pay-notes"
+              />
+            </div>
+            <Button 
+              type="submit" 
+              disabled={createPayment.isPending || uploading} 
+              className="w-full rounded-full bg-primary text-primary-foreground"
+              data-testid="button-submit-quick-pay"
+            >
+              {uploading ? 'Uploading...' : createPayment.isPending ? 'Recording...' : 'Record Payment'}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
