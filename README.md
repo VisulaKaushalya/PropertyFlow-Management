@@ -71,7 +71,13 @@ pnpm --filter @workspace/property-mgmt run dev
 
 Open `http://localhost:5173`.
 
-The frontend calls the API at `/api`. For a normal local setup, run the API on port 8080 and configure your local reverse proxy or browser proxy so `/api` reaches `http://localhost:8080`. In Replit, the artifact routing already provides this connection. If your local Vite setup does not proxy `/api`, add a Vite proxy from `/api` to `http://localhost:8080` in `artifacts/property-mgmt/vite.config.ts`.
+The frontend calls the API at `/api`. Vite proxies that path to `http://localhost:8080` by default. If you run the API elsewhere, set `API_URL` before starting the frontend:
+
+```bash
+export API_URL="http://localhost:8080"
+```
+
+In Replit, the artifact routing already provides this connection.
 
 ## Generate API clients after changing OpenAPI
 
